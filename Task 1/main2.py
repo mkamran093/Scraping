@@ -1,14 +1,16 @@
+import os
 import requests
 import csv
 import urllib.parse
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 
-myUrl = 'https://aibd.org/directory/?ps&pn=2&limit=985'
-token = "8247653dd3414734b941cd603bbb3cfe834eed3fa8d"
+load_dotenv()
+
+myUrl = os.getenv("URL")
+token = os.getenv("TOKEN")
 target_url = urllib.parse.quote(myUrl)
 url = "http://api.scrape.do?token={}&url={}".format(token, target_url)
-
-
 
 data_list = []
 
