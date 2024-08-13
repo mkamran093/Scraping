@@ -48,7 +48,7 @@ wcapi = API(
 def requests_retry_session(retries=5, backoff_factor=0.5, status_forcelist=(500, 502, 504), session=None):
     session = session or requests.Session()
     retry = Retry(
-        total=retries,
+        total=retries, 
         read=retries,
         connect=retries,
         backoff_factor=backoff_factor,
