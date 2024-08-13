@@ -1,0 +1,89 @@
+# VP Scraper Project
+
+## Description
+
+VP Scraper is a web scraping system designed to extract product information and pricing details from the VistaPrint website. It employs Scrapy for the scraping tasks and FastAPI for API management, with MongoDB serving as the database for storing the scraped data.
+
+## Features
+
+- Automated sitemap parsing to fetch product URLs.
+- Detailed scraping of product information.
+- Data persistence in MongoDB.
+- REST API to initiate scraping processes.
+
+## Prerequisites
+
+Before you begin, ensure you have the following:
+
+- Python 3.8+
+- MongoDB
+- Pip for Python package management
+
+## Tech Stack
+
+- UI: NextJS
+- API: FastAPI
+- Scraping: Scrapy & Playwright
+
+## Installation
+
+To install VP Scraper, follow these steps:
+
+1. Clone the repository:
+   ```shell
+   git clone https://github.com/EyosiyasMekbib/vp_scraper
+   ```
+2. Navigate to the project directory:
+   ```shell
+   cd vp_scraper
+   ```
+3. Create and activate a virtual environment:
+   - For Windows:
+     ```shell
+     python -m venv venv
+     .\venv\Scripts\activate
+     ```
+   - For Unix or MacOS:
+     ```shell
+     python3 -m venv venv
+     source venv/bin/activate
+     ```
+4. Install the required dependencies:
+   ```shell
+   pip install -r requirements.txt
+   ```
+
+## Configuration
+
+Create a .env file in the root directory of the project with the necessary configurations:
+
+```shell
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster-url>
+MONGO_DB_NAME=<your-database-name>
+SITEMAP_URL=https://www.vistaprint.com/sitemaps/product.xml
+```
+
+## Usage
+
+To run the FastAPI server:
+
+```shell
+uvicorn api.main:app --reload
+```
+
+To initiate the scraping process:
+
+```shell
+curl -X POST http://localhost:8000/trigger_scraping/
+```
+
+for windows:
+```shell
+Invoke-WebRequest -Uri http://localhost:8000/trigger_scraping/ -Method POST
+```
+
+To access API documentation: http://localhost:8000/docs
+
+## Architecture
+
+![Architecture Diagram](./architecture.png)

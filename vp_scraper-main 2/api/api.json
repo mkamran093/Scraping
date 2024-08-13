@@ -1,0 +1,59 @@
+{
+  "info": {
+    "name": "My FastAPI Scraper API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Configure Scheduler",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scrape_all_interval_hours\": 24,\n  \"scrape_price_interval_hours\": 12\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8000/configure-scheduler/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["configure-scheduler", ""]
+        }
+      }
+    },
+    {
+      "name": "Trigger Scraping",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/trigger_scraping/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["trigger_scraping", ""]
+        }
+      }
+    },
+    {
+      "name": "Trigger Price Scraping",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/trigger_price_scraping/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["trigger_price_scraping", ""]
+        }
+      }
+    }
+  ]
+}

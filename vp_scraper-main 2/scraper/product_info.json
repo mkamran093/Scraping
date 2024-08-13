@@ -1,0 +1,74 @@
+{
+    "name": "Yard Sign Stands",
+    "description": "Display your yard signs where everyone can see with built-to-last stands. 3 stand options made with durable materials. ",
+    "image": "https://cms.cloudinary.vpsvc.com/images/c_scale,dpr_auto,f_auto,q_auto:best,t_productPageHeroGalleryTransformation_v2,w_auto/legacy_dam/en-us/s001257132/yard-sign-stands-003",
+    "options": [
+        {
+            "image": {
+                "cloudinaryImage": {
+                    "cloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_scale,dpr_auto,f_auto,q_auto:best,t_productPageHeroGalleryTransformation_v2,w_auto/legacy_dam/en-us/S001290253/yard-signs-stand-wire-001?cb=e44babb96473b8b3a26dc05e978fd85700ffd520",
+                    "smallCloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_scale,dpr_auto,e_blur:300,f_auto,w_170/legacy_dam/en-us/S001290253/yard-signs-stand-wire-001?cb=e44babb96473b8b3a26dc05e978fd85700ffd520",
+                    "mobileCloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_scale,dpr_auto,f_auto,t_productPageHeroGalleryMobileTransformation_v3,w_auto/legacy_dam/en-us/S001290253/yard-signs-stand-wire-001?cb=e44babb96473b8b3a26dc05e978fd85700ffd520",
+                    "thumbnailCloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_lfill,dpr_auto,f_auto,g_xy_center,h_100,q_auto:good,w_100,x_800,y_200/legacy_dam/en-us/S001290253/yard-signs-stand-wire-001?cb=e44babb96473b8b3a26dc05e978fd85700ffd520"
+                }
+            },
+            "selections": {
+                "Type": "Wire Yard Sign Stand"
+            }
+        },
+        {
+            "image": {
+                "cloudinaryImage": {
+                    "cloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_scale,dpr_auto,f_auto,q_auto:best,t_productPageHeroGalleryTransformation_v2,w_auto/legacy_dam/en-ie/S001489630/MXP-4986-yard-sign-stands-005?cb=0884886144b0fe8d381e913af7d8d010a0992eba",
+                    "smallCloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_scale,dpr_auto,e_blur:300,f_auto,w_170/legacy_dam/en-ie/S001489630/MXP-4986-yard-sign-stands-005?cb=0884886144b0fe8d381e913af7d8d010a0992eba",
+                    "mobileCloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_scale,dpr_auto,f_auto,t_productPageHeroGalleryMobileTransformation_v3,w_auto/legacy_dam/en-ie/S001489630/MXP-4986-yard-sign-stands-005?cb=0884886144b0fe8d381e913af7d8d010a0992eba",
+                    "thumbnailCloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_lfill,dpr_auto,f_auto,g_xy_center,h_100,q_auto:good,w_100,x_800,y_200/legacy_dam/en-ie/S001489630/MXP-4986-yard-sign-stands-005?cb=0884886144b0fe8d381e913af7d8d010a0992eba"
+                }
+            },
+            "selections": {
+                "Type": "Plastic Yard Sign Stand"
+            }
+        },
+        {
+            "image": {
+                "cloudinaryImage": {
+                    "cloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_scale,dpr_auto,f_auto,q_auto:best,t_productPageHeroGalleryTransformation_v2,w_auto/legacy_dam/en-us/S001297016/tabletop-easel-005?cb=0044c504dd1001e687e41be65bd957abe63c36ca",
+                    "smallCloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_scale,dpr_auto,e_blur:300,f_auto,w_170/legacy_dam/en-us/S001297016/tabletop-easel-005?cb=0044c504dd1001e687e41be65bd957abe63c36ca",
+                    "mobileCloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_scale,dpr_auto,f_auto,t_productPageHeroGalleryMobileTransformation_v3,w_auto/legacy_dam/en-us/S001297016/tabletop-easel-005?cb=0044c504dd1001e687e41be65bd957abe63c36ca",
+                    "thumbnailCloudinaryUrl": "https://cms.cloudinary.vpsvc.com/images/c_lfill,dpr_auto,f_auto,g_xy_center,h_100,q_auto:good,w_100,x_800,y_200/legacy_dam/en-us/S001297016/tabletop-easel-005?cb=0044c504dd1001e687e41be65bd957abe63c36ca"
+                }
+            },
+            "selections": {
+                "Type": "Table Top Easel"
+            }
+        }
+    ],
+    "breadcrumbs": [
+        {
+            "available": true,
+            "name": "Home",
+            "position": 1,
+            "url": "https://www.vistaprint.com/"
+        },
+        {
+            "available": true,
+            "name": "Signs & Banners",
+            "position": 2,
+            "url": "https://www.vistaprint.com/signs-posters"
+        },
+        {
+            "available": true,
+            "name": "Sign Accessories",
+            "position": 3,
+            "url": "https://www.vistaprint.com/signs-posters/accessories"
+        },
+        {
+            "available": true,
+            "name": "Yard Sign Stands",
+            "position": 4,
+            "url": "https://www.vistaprint.com/signs-posters/accessories/yard-sign-stand"
+        }
+    ],
+    "mvp_id": "PRD-TD5YF4R8",
+    "mvp_version": 7
+}
