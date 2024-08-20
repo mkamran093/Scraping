@@ -1,79 +1,166 @@
+from constants import ZYTE_API_URL, ZYTE_API_KEY
 from bs4 import BeautifulSoup
+from base64 import b64decode
 import requests
+import logging
+import json
+import csv
 import re
+import os
 
-def scrape_product(product):
-    print("Scraping product", product['name'], "...")
-    response = requests.get(product['url'])
-    soup = BeautifulSoup(response.content, 'html.parser')
+def scrape_product(product, category):
+    logging.info(f"Scraping product....")
+    try:
 
-    dimensions_dict = {}
-    description_dict = {}
-    product_overview = []
-    images = []
+        api_response = requests.post(
+            ZYTE_API_URL,
+            auth=(ZYTE_API_KEY, ""),   
+            json={
+                "url": product,
+                "httpResponseBody": True,
+            },
+        )
 
-    # Extract the product details
-    product_name = soup.find('h1', {'data-hb-id': 'Heading'}).get_text(strip=True)
-    sfprice_div = soup.find('div', class_='SFPrice').find_all('span')[0].get_text(strip=True)
-    product_price = float(''.join(re.findall(r'\d+', sfprice_div)))
-    product_description = soup.find('div', class_='RomanceCopy-text').get_text(strip=True)
-    product_rating = soup.find('span', class_='ProductRatingNumberWithCount-rating').get_text(strip=True)
-    div = soup.find('div', id='Pres_list_keyval_table::default')
-    for dt, dd in zip(div.find_all('dt'), div.find_all('dd')):
-        key = dt.get_text(strip=True)
-        value = dd.get_text(strip=True)
-        dimensions_dict[key] = value
-    div = soup.find('div', class_='DescriptionList')
-    for dt, dd in zip(div.find_all('dt'), div.find_all('dd')):
-        key = dt.get_text(strip=True)
-        value = dd.get_text(strip=True)
-        description_dict[key] = value
-    div = soup.find('div', {'data-hb-id': 'Box'})
-    for p in div.find_all('p'):
-        product_overview.append(p.get_text(strip=True))
-    div = soup.find('div', class_=re.compile(r'\b' + re.escape('ProductDetailImageCarousel-carouselItem') + r'\b'))
-    for img in div.find_all('img'):
-        images.append(img['src'])
-    availability = True if soup.find('span', class_='ShippingHeadlin-text').get_text(strip=True) == 'This Item Is Out Of Stock' else False
-
-
-def scrape_sub_categories(sub_category):
-    print("Scraping sub-category", sub_category['name'], "...")
-    response = requests.get(sub_category['url'])
-    soup = BeautifulSoup(response.content, 'html.parser')
-
-    all_products = []
-
-    total_products = int(re.sub(r'\D', '', soup.find('div', {'data-enzyme-id': 'ResultsText'}).text))
-
-    while (len(all_products) < total_products):
-        for product in soup.find_all('div', {'data-hb-id': 'ProductCard'}):
-            product_url = product.find('a', {'data-enzyme-id': 'BrowseProductCardWrapper-component'})['href']
-            all_products.append(product_url)
+        if api_response.status_code == 200:
+            http_response_body = b64decode(api_response.json()["httpResponseBody"])
+            soup = BeautifulSoup(http_response_body, 'html.parser')
+            
+             # Find the JSON-LD script tag
+        script_tag = soup.find('script', type='application/ld+json')
         
-        # Check if there is a next page
-        next_page = soup.find('a', {'data-enzyme-id': 'paginationNextPageLink'})['href']
-        if next_page:
-            response = requests.get(next_page)
-            soup = BeautifulSoup(response.content, 'html.parser')
-        else:
-            break
-    
-    for product in all_products:
-        scrape_product(product)
+        if script_tag:
+            # Parse the JSON content
+            json_data = json.loads(script_tag.string)
+            
+            # Extract the desired information
+            product_name = json_data.get('name')
+            sku = json_data.get('sku')
+            brand = json_data.get('brand', {}).get('name')
+            image_url = json_data.get('image')
+            review_count = json_data.get('aggregateRating', {}).get('reviewCount')
+            rating_value = json_data.get('aggregateRating', {}).get('ratingValue')
+            price = json_data.get('offers', {}).get('price')
+            currency = json_data.get('offers', {}).get('priceCurrency')
+            
+                
+            dimensions_dict = {}
+            div = soup.find('div', id='Pres_list_keyval_table::default')
+            if div:
+                for dt, dd in zip(div.find_all('dt'), div.find_all('dd')):
+                    key = dt.get_text(strip=True)
+                    value = dd.get_text(strip=True)
+                    dimensions_dict[key] = value
 
+            description = []
+            div = soup.find('ul', class_="BulletList BulletList--withPadding")
+            if div:
+                for li in div.find_all('li'):
+                    description.append(li.get_text(strip=True))
+                    
+            product_overview = []
+            divs = soup.find('div', {'id': 'Pres_vizcon_visual::default'})
+            if divs:
+                for p in divs.find_all('p'):
+                    product_overview.append(p.get_text(strip=True))
+
+            availability = json_data.get('offers', {}).get('availability')
+            in_stock = availability == "http://schema.org/InStock"
+
+            with open('product_data.csv', mode='a', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+
+                if os.path.getsize('product_data.csv') == 0:
+                    writer.writerow([
+                    'Product Name', 'Price', 'Currency', 'SKU', 'Brand', 'Category', 'Rating', 'Availability',
+                    # 'Dimensions', 
+                    'Reviews', 'Product Description', 'Overview', 'Image'
+                ])
+
+                writer.writerow([
+                    product_name,
+                    price,
+                    currency,
+                    sku,
+                    brand,
+                    category,
+                    rating_value,
+                    'In Stock' if in_stock else 'Out of Stock',
+                    # str(dimensions_dict),
+                    review_count,
+                    str(description),
+                    ' | '.join(product_overview),
+                    image_url
+                ])
+
+            logging.info(f"Product {product_name} scraped successfully")
+    except Exception as e:
+        logging.error(f"Failed to scrape product {product['name']}: {e}")
+
+def scrape_sub_categories(name, url):
+    logging.info(f"Scraping sub-category {name} ...")
+    url = url + '?itemsperpage=96'
+    try:
+         api_response = requests.post(
+                ZYTE_API_URL,
+                auth=(ZYTE_API_KEY, ""),
+                json={
+                    "url": url,
+                    "httpResponseBody": True,
+                },
+            )
+         if api_response.status_code == 200:
+                http_response_body = b64decode(api_response.json()["httpResponseBody"])
+                soup = BeautifulSoup(http_response_body, 'html.parser')
+                logging.info("Successfully retrieved and parsed the webpage content")
+
+                all_products = []
+
+                total_products_text = soup.find('div', {'data-enzyme-id': 'ResultsText'}).text
+                total_products = int(re.sub(r'[^\d]', '', total_products_text))
+                
+                logging.info(f"Extracting prodcut urls.....")
+                while len(all_products) < total_products:
+                    print(len(soup.find_all('div', {'data-hb-id': 'ProductCard'})))
+                    for product in soup.find_all('div', {'data-hb-id': 'ProductCard'}):
+                        product_url = product.find('a', {'data-enzyme-id': 'BrowseProductCardWrapper-component'})['href']
+                        all_products.append(product_url)
+                        scrape_product(product_url, name)
+
+                    next_page = soup.find('a', {'data-enzyme-id': 'paginationNextPageLink'})['href']
+                    if next_page:
+                        api_response = requests.post(
+                            ZYTE_API_URL,
+                            auth=(ZYTE_API_KEY, ""),
+                            json={
+                                "url": next_page,
+                                "httpResponseBody": True,
+                            },
+                        )
+                        if api_response.status_code == 200:
+                            print('on next page')
+                            http_response_body = b64decode(api_response.json()["httpResponseBody"])
+                            soup = BeautifulSoup(http_response_body, 'html.parser')
+                        else:
+                            logging.error(f"Failed to retrieve the webpage. Status code: {api_response.status_code}")
+                    else:
+                        break
+                
+                for product in all_products:
+                    scrape_product(product, name)
+    except Exception as e:
+        logging.error(f"Failed to scrape sub-category {name}: {e}")
+        print(e)
 
 def scrape_categories(soup):
-    category_name = soup.find('div', class_='CategoryCarousel-title').get_text(strip=True)
+   
+    try:
+        category_name = soup.find('div', class_='CategoryCarousel-title').get_text(strip=True)
+        logging.info(f"Scraping category {category_name} ...")
 
-    # Extract the sub-categories
-    sub_categories = []
-    for item in soup.find_all('li', class_='CategoryCarousel-carouselItem'):
-        sub_category_name = item.find('p', class_='CategoryCarousel-imageTitle').get_text(strip=True)
-        sub_category_url = item.find('a', class_='CategoryCarousel-imageContainer')['href']
-        
-        scrape_sub_categories({
-            'name': sub_category_name,
-            'url': sub_category_url})
-    
+        for item in soup.find_all('li', class_='CategoryCarousel-carouselItem'):
+            sub_category_name = item.find('p', class_='CategoryCarousel-imageTitle').get_text(strip=True)
+            sub_category_url = item.find('a', class_='CategoryCarousel-imageContainer')['href']
 
+            scrape_sub_categories(sub_category_name, sub_category_url)
+    except Exception as e:
+        logging.error(f"Failed to scrape category: {e}")
