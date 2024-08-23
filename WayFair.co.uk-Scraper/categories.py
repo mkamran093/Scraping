@@ -36,20 +36,11 @@ def scrape_product(product, category):
             product_name = json_data.get('name')
             sku = json_data.get('sku')
             brand = json_data.get('brand', {}).get('name')
-            image_url = json_data.get('image')
             review_count = json_data.get('aggregateRating', {}).get('reviewCount')
             rating_value = json_data.get('aggregateRating', {}).get('ratingValue')
             price = json_data.get('offers', {}).get('price')
             currency = json_data.get('offers', {}).get('priceCurrency')
             
-                
-            dimensions_dict = {}
-            div = soup.find('div', id='Pres_list_keyval_table::default')
-            if div:
-                for dt, dd in zip(div.find_all('dt'), div.find_all('dd')):
-                    key = dt.get_text(strip=True)
-                    value = dd.get_text(strip=True)
-                    dimensions_dict[key] = value
 
             description = []
             div = soup.find('ul', class_="BulletList BulletList--withPadding")
@@ -66,14 +57,23 @@ def scrape_product(product, category):
             availability = json_data.get('offers', {}).get('availability')
             in_stock = availability == "http://schema.org/InStock"
 
+            img_section = soup.find('div', class_='ProductDetailImageCarousel-thumbnails ProductDetailImageCarousel-thumbnails--halfColumnWidthCarousel')
+            urls = []
+            for li in img_section.find_all('li'):
+                urls.append(li.find('img')['src'])
+            
+            img_urls = []
+            for url in urls:
+                new_url = url.replace('resize-h56-w56%5Ecompr-r50', 'resize-h800-w800%5Ecompr-r85')
+                img_urls.append(new_url)
+
             with open('product_data.csv', mode='a', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
 
                 if os.path.getsize('product_data.csv') == 0:
                     writer.writerow([
                     'Product Name', 'Price', 'Currency', 'SKU', 'Brand', 'Category', 'Rating', 'Availability',
-                    # 'Dimensions', 
-                    'Reviews', 'Product Description', 'Overview', 'Image'
+                    'Reviews', 'Product Description', 'Overview', 'Image URLs'
                 ])
 
                 writer.writerow([
@@ -85,11 +85,10 @@ def scrape_product(product, category):
                     category,
                     rating_value,
                     'In Stock' if in_stock else 'Out of Stock',
-                    # str(dimensions_dict),
                     review_count,
                     str(description),
                     ' | '.join(product_overview),
-                    image_url
+                    ' | '.join(img_urls)
                 ])
 
             logging.info(f"Product {product_name} scraped successfully")
