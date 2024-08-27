@@ -36,9 +36,7 @@ options.add_argument("--user-data-dir=C:\\Users\\NeXbit\\AppData\\Local\\Google\
 options.add_argument("--headless")  # Run in headless mode
 options.add_argument("--disable-gpu")  # Disable GPU acceleration
 
-def searchPart(partNo, category):
-    # Initialize the Chrome driver
-    driver = uc.Chrome(options=options)
+def searchPart(driver, partNo, category):
     try:
         # Navigate to the URL
         logger.info("Navigating to the URL: " + url)
@@ -60,58 +58,82 @@ def searchPart(partNo, category):
         time.sleep(5)
 
         # Search for a p tag with text "No results found"
+        # try:
+        #     if driver.find_element(By.XPATH, "//p[contains(text(), 'No results found')]") is not None:
+        #         logger.error("No results found for the part number: " + partNo)
+        #         return
+        # except:
+        #     pass
+
+        # Select the a tag which has the part number in its text
         try:
-            no_results = driver.find_element(By.XPATH, "//p[contains(text(), 'No results found')]")
+            part_link = driver.find_element(By.XPATH, "//a[contains(text(), '" + partNo + "')]")
+        except NoSuchElementException:
             logger.error("No results found for the part number: " + partNo)
-            driver.quit()
             return
-        except:
+        
+        # Check for first button with class = "button check"
+        try:
+            check_button = driver.find_element(By.XPATH, "//button[@class='button check']")
+            check_button.click()
+        except NoSuchElementException:
             pass
 
-        # select the a tag which has the part number in its text
-        part_link = driver.find_element(By.XPATH, "//a[contains(text(), '" + partNo + "')]")
+        time.sleep(5)
+
+        # Search for a td tag with a property named "ref-qty" and get its text
+        try:
+            ref_qty = driver.find_element(By.XPATH, "//td[@ref-qty]").text
+        except NoSuchElementException:
+            ref_qty = "Not available"
+
         part_link.click()
 
         time.sleep(5)
 
         # Get the part details, search for table tag with id = productdetails and get the text of its p tag
         part_details = driver.find_element(By.ID, "productdetails").find_element(By.TAG_NAME, "p").text
+        print("Available quantity: " + ref_qty)
         print(part_details)
 
         time.sleep(5)
 
-        driver.quit()
-    
     except TimeoutException:
         logger.error("The page took too long to load.")
-        driver.quit()
-        return
-
 
 def main():
+
+    # Initialize the Chrome driver
+    driver = uc.Chrome(options=options)
+
+    print("\n")
     print("===============================================")
     print("=====  Welcome to PGW Auto Glass Scraper  =====")
     print("===============================================")
     print("\n")
 
-    partNo = input("Enter the part number: ")
-    print("\n")
-    print("1. Auto Glass    2. Sundry")
-    category = input("Enter one option(1 or 2): ")
+    try:
+        while True:
+            partNo = input("Enter the part number: ")
+            print("\n")
+            print("1. Auto Glass    2. Sundry")
+            category = input("Enter one option (1 or 2): ")
 
-    while True:
-        if category == '1' or category == '2':
-            break
-        else:
-            print("Invalid input. Please enter a valid option.")
-            category = input("Enter one option(1 or 2): ")
-    
-    print("\n")
-    if category == '1':
-        category = "Auto Glass"
-    else:
-        category = "Sundry"
-    searchPart(partNo, category)
+            while category not in ['1', '2']:
+                print("Invalid input. Please enter a valid option.")
+                category = input("Enter one option (1 or 2): ")
+
+            category = "Auto Glass" if category == '1' else "Sundry"
+
+            searchPart(driver, partNo, category)
+
+            # Ask if the user wants to search for another part
+            another_search = input("\nDo you want to search for another part? (yes/no): ").strip().lower()
+            if another_search != 'yes':
+                break
+
+    finally:
+        driver.quit()
 
 if __name__ == "__main__":
     main()
