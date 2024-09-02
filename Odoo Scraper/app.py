@@ -45,12 +45,14 @@ HTML_TEMPLATE = """
     <h2>PWG Data</h2>
     <table>
         <tr>
+            <th>Part Number</th>
             <th>Available Quantity</th>
-            <th>Part Details</th>
+            <th>Location</th>
         </tr>
         <tr>
-            <td>{{ pwg_data.get('ref_qty', 'N/A') }}</td>
             <td>{{ pwg_data.get('part_details', 'N/A') }}</td>
+            <td>{{ pwg_data.get('ref_qty', 'N/A') }}</td>
+            <td>{{ pwg_data.get('location', 'N/A') }}</td>
         </tr>
     </table>
     {% endif %}
@@ -61,14 +63,19 @@ HTML_TEMPLATE = """
             <th>Part Number</th>
             <th>Price 1</th>
             <th>In Stock</th>
+            <th>Location</th>
         </tr>
+        {% for item in igc_data %}
         <tr>
-            <td>{{ igc_data.get('first_value', 'N/A') }}</td>
-            <td>{{ igc_data.get('fourth_value', 'N/A') }}</td>
-            <td>{{ igc_data.get('fifth_value', 'N/A') }}</td>
+            <td>{{ item.part_number }}</td>
+            <td>{{ item.price1 }}</td>
+            <td>{{ item.in_stock }}</td>
+            <td>{{ item.location }}</td>
         </tr>
+        {% endfor %}
     </table>
-    {% endif %}
+{% endif %}
+
     {% if pilkington_data %}
     <h2>Pilkington Data</h2>
     <table>
@@ -76,11 +83,13 @@ HTML_TEMPLATE = """
             <th>Part Number</th>
             <th>Part Name</th>
             <th>Price</th>
+            <th>Location</th>
         </tr>
         <tr>
             <td>{{ pilkington_data.get('part_no', 'N/A') }}</td>
             <td>{{ pilkington_data.get('part_name', 'N/A') }}</td>
             <td>{{ pilkington_data.get('price', 'N/A') }}</td>
+            <td>{{ pilkington_data.get('location', 'N/A') }}</td>
         </tr>
     </table>
     {% endif %}
@@ -92,31 +101,40 @@ def parse_pwg_data(data_string):
     lines = data_string.split("\n")
     ref_qty = lines[0].split(": ")[1] if len(lines) > 0 else "N/A"
     part_details = lines[1] if len(lines) > 1 else "N/A"
+    location = lines[2].split(":: ")[1] if len(lines) > 2 else "N/A"
     return {
         "ref_qty": ref_qty,
-        "part_details": part_details
+        "part_details": part_details,
+        "location": location
     }
 
-def parse_igc_data(data_string):
-    lines = data_string.split("\n")
-    part_number = lines[0].split(": ")[1] if len(lines) > 0 else "N/A"
-    price1 = lines[1].split(": ")[1] if len(lines) > 1 else "N/A"
-    price2 = lines[2].split(": ")[1] if len(lines) > 2 else "N/A"
-    return {
-        "first_value": part_number,
-        "fourth_value": price1,
-        "fifth_value": price2
-    }
+def parse_igc_data(data_list):
+    parsed_data = []
+    for item in data_list:
+        part_number = item[0] if len(item) > 0 else "N/A"
+        price1 = item[1] if len(item) > 1 else "N/A"
+        in_stock = item[2] if len(item) > 2 else "N/A"
+        location = item[3] if len(item) > 3 else "N/A"
+        parsed_data.append({
+            "part_number": part_number,
+            "price1": price1,
+            "in_stock": in_stock,
+            "location": location
+        })
+    return parsed_data
+
 
 def parse_pilkington_data(data_string):
     lines = data_string.split("\n")
     part_no = lines[0].split(": ")[1] if len(lines) > 0 else "N/A"
     part_name = lines[1].split(": ")[1] if len(lines) > 1 else "N/A"
     price = lines[2].split(": ")[1] if len(lines) > 2 else "N/A"
+    location = lines[3].split(": ")[1] if len(lines) > 3 else "N/A"
     return {
         "part_no": part_no,
         "part_name": part_name,
-        "price": price
+        "price": price,
+        "location": location
     }
 
 @app.after_request
@@ -134,13 +152,13 @@ def index():
         
         # Call the scrapers with the user input
         pwg_string = PWGScraper(user_input)
-        igc_string = IGCScraper(user_input)
+        igc_list = IGCScraper(user_input)
         pilkington_string = PilkingtonScraper(user_input)
 
         if pwg_string:
             pwg_data = parse_pwg_data(pwg_string)
-        if igc_string:
-            igc_data = parse_igc_data(igc_string)
+        if igc_list:
+            igc_data = parse_igc_data(igc_list)
         if pilkington_string:
             pilkington_data = parse_pilkington_data(pilkington_string)
 

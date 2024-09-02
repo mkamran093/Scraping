@@ -23,12 +23,7 @@ for proc in psutil.process_iter(['pid', 'name']):
     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         pass
 
-# Set up Chrome options
-options = uc.ChromeOptions()
-options.add_argument("--disable-blink-features=AutomationControlled")
-options.add_argument("--user-data-dir=C:\\Users\\NeXbit\\AppData\\Local\\Google\\Chrome\\User Data")
-options.add_argument("--headless")  # Run in headless mode
-options.add_argument("--disable-gpu")  # Disable GPU acceleration
+
 
 def searchPart(driver, partNo):
     try:
@@ -49,11 +44,12 @@ def searchPart(driver, partNo):
 
         # Select the a tag which has the part number in its text
         try:
-            part_link = driver.find_element(By.XPATH, "//a[contains(text(), '" + partNo + "')]")
+            part_link = driver.find_element(By.XPATH, "//font[contains(text(), '" + partNo + "')]").text
         except NoSuchElementException:
             logger.error("No results found for the part number: " + partNo)
             return
         
+        location = driver.find_element(By.XPATH, "//span[@class='b2btext']").text
         # Check for first button with class = "button check"
         try:
             check_button = driver.find_element(By.XPATH, "//button[@class='button check']")
@@ -68,14 +64,7 @@ def searchPart(driver, partNo):
             ref_qty = driver.find_element(By.XPATH, "//td[@ref-qty]").text
         except NoSuchElementException:
             ref_qty = "Not available"
-
-        part_link.click()
-
-        time.sleep(5)
-
-        # Get the part details, search for table tag with id = productdetails and get the text of its p tag
-        part_details = driver.find_element(By.ID, "productdetails").find_element(By.TAG_NAME, "p").text
-        return "Available quantity: " + ref_qty + "\n" + part_details
+        return "Available quantity: " + ref_qty + "\nPart No: " + part_link + "\nLocation: " + location
 
     except TimeoutException:
         logger.error("No results found for the part number: " + partNo + "on PWG.")
@@ -83,6 +72,12 @@ def searchPart(driver, partNo):
 
 def PWGScraper(partNo):
 
+    # Set up Chrome options
+    options = uc.ChromeOptions()
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--user-data-dir=C:\\Users\\NeXbit\\AppData\\Local\\Google\\Chrome\\User Data")
+    options.add_argument("--headless")  # Run in headless mode
+    options.add_argument("--disable-gpu")  # Disable GPU acceleration
     driver = uc.Chrome(options=options)
 
     try:
@@ -91,3 +86,6 @@ def PWGScraper(partNo):
         return result
     finally:
         driver.quit()
+
+if __name__ == "__main__":
+    PWGScraper("FW05322")
