@@ -5,7 +5,6 @@ import requests
 import logging
 import json
 import csv
-import re
 import os
 
 def scrape_product(product, category):
@@ -22,7 +21,6 @@ def scrape_product(product, category):
 
     print("Scraping Product...")
     try:
-
         api_response = requests.post(
             ZYTE_API_URL,
             auth=(ZYTE_API_KEY, ""),   
@@ -36,7 +34,7 @@ def scrape_product(product, category):
             http_response_body = b64decode(api_response.json()["httpResponseBody"])
             soup = BeautifulSoup(http_response_body, 'html.parser')
             
-             # Find the JSON-LD script tag
+            # Find the JSON-LD script tag
             script_tag = soup.find('script', type='application/ld+json')
             
             if script_tag:
@@ -44,68 +42,82 @@ def scrape_product(product, category):
                 json_data = json.loads(script_tag.string)
             
                 # Extract the desired information
-                product_name = json_data.get('name')
-                sku = json_data.get('sku')
-                brand_name = json_data.get('brand', {}).get('name')
-                image_url = json_data.get('image')
-                description = json_data.get('description')
-                review_count = json_data.get('aggregateRating', {}).get('reviewCount')
-                rating = json_data.get('aggregateRating', {}).get('ratingValue')
-                price = json_data.get('offers', {}).get('price')
-                price_currency = json_data.get('offers', {}).get('priceCurrency')
-                availability = json_data.get('offers', {}).get('availability')
+                try:
+                    product_name = json_data.get('name', 'N/A')
+                    sku = json_data.get('sku', 'N/A')
+                    brand_name = json_data.get('brand', {}).get('name', 'N/A')
+                    image_url = json_data.get('image', 'N/A')
+                    description = json_data.get('description', 'N/A')
+                    review_count = json_data.get('aggregateRating', {}).get('reviewCount', 'N/A')
+                    rating = json_data.get('aggregateRating', {}).get('ratingValue', 'N/A')
+                    price = json_data.get('offers', {}).get('price', 'N/A')
+                    price_currency = json_data.get('offers', {}).get('priceCurrency', 'N/A')
+                    availability = json_data.get('offers', {}).get('availability', 'N/A')
                     
-                product_overview = []
-                divs = soup.find('div', {'id': 'Pres_vizcon_visual::default'})
-                if divs:
-                    for p in divs.find_all('p'):
-                        product_overview.append(p.get_text(strip=True))
+                    product_overview = []
+                    divs = soup.find('div', {'id': 'Pres_vizcon_visual::default'})
+                    if divs:
+                        for p in divs.find_all('p'):
+                            product_overview.append(p.get_text(strip=True))
 
-                in_stock = availability == "http://schema.org/InStock"
+                    in_stock = availability == "http://schema.org/InStock"
 
-                img_section = soup.find('div', class_='ProductDetailImageCarousel-thumbnails ProductDetailImageCarousel-thumbnails--halfColumnWidthCarousel')
-                urls = []
-                img_urls = []
-                if (img_section):
-                    for li in img_section.find_all('li'):
-                        urls.append(li.find('img')['src'])
-                    
-                    for url in urls:
-                        new_url = url.replace('resize-h56-w56%5Ecompr-r50', 'resize-h800-w800%5Ecompr-r85')
-                        img_urls.append(new_url)
-                else:
-                    print("no images found")
-    
-                with open(csv_file, mode='a', newline='', encoding='utf-8') as file:
-                    writer = csv.writer(file)
+                    img_section = soup.find('div', class_='ProductDetailImageCarousel-thumbnails ProductDetailImageCarousel-thumbnails--halfColumnWidthCarousel')
+                    urls = []
+                    img_urls = []
+                    if img_section:
+                        for li in img_section.find_all('li'):
+                            urls.append(li.find('img')['src'])
+                        
+                        for url in urls:
+                            new_url = url.replace('resize-h56-w56%5Ecompr-r50', 'resize-h800-w800%5Ecompr-r85')
+                            img_urls.append(new_url)
+                    else:
+                        print("No images found")
+        
+                    with open(csv_file, mode='a', newline='', encoding='utf-8') as file:
+                        writer = csv.writer(file)
 
-                    if os.path.getsize(csv_file) == 0:
+                        if os.path.getsize(csv_file) == 0:
+                            writer.writerow([
+                            'Product Name', 'Price', 'Currency', 'SKU', 'Brand', 'Category', 'Rating', 'Availability',
+                            'Reviews', 'Product Description', 'Overview', 'Product Url', 'Image', 'Image URLs'
+                        ])
+
                         writer.writerow([
-                        'Product Name', 'Price', 'Currency', 'SKU', 'Brand', 'Category', 'Rating', 'Availability',
-                        'Reviews', 'Product Description', 'Overview', 'Product Url', 'Image', 'Image URLs'
-                    ])
+                            product_name,
+                            price,
+                            price_currency,
+                            sku,
+                            brand_name,
+                            category,
+                            rating,
+                            'In Stock' if in_stock else 'Out of Stock',
+                            review_count,
+                            description,
+                            ' | '.join(product_overview),
+                            product,
+                            image_url,
+                            ' | '.join(img_urls)
+                        ])
 
-                    writer.writerow([
-                        product_name,
-                        price,
-                        price_currency,
-                        sku,
-                        brand_name,
-                        category,
-                        rating,
-                        'In Stock' if in_stock else 'Out of Stock',
-                        review_count,
-                        description,
-                        ' | '.join(product_overview),
-                        product,
-                        image_url,
-                        ' | '.join(img_urls)
-                    ])
-
-            logging.info(f"Product {product_name} scraped successfully")
+                    logging.info(f"Product {product_name} scraped successfully")
+                except Exception as e:
+                    logging.error(f"Error extracting details for product {product}: {e}")
+                    print(f"Skipping product {product} due to error in extracting details")
+                    return
+            else:
+                logging.error(f"No JSON-LD data found for product {product}")
+                print(f"Skipping product {product} due to missing JSON-LD data")
+                return
+        else:
+            logging.error(f"Failed to retrieve the webpage for product {product}. Status code: {api_response.status_code}")
+            print(f"Skipping product {product} due to API response error")
+            return
     except Exception as e:
-        logging.error(f"Failed to scrape product {product['name']}: {e}")
-
+        logging.error(f"Failed to scrape product {product}: {e}")
+        print(f"Skipping product {product} due to general error")
+        return
 def scrape_sub_categories(url):
     try:
          api_response = requests.post(
