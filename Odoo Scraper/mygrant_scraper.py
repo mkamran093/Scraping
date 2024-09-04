@@ -10,7 +10,6 @@ from selenium.common.exceptions import NoSuchElementException
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-url = 'https://buypgwautoglass.com/PartSearch/search.asp?REG=&UserType=F&ShipToNo=85605&PB=544'
 webdriver_path = "undetected_chromedriver.exe"
 
 # Kill any existing Chrome driver processes
@@ -22,9 +21,8 @@ for proc in psutil.process_iter(['pid', 'name']):
         pass
 
 
+def MyGrantScraper(partNo):
 
-def PilkingtonScraper(partNo):
-    
     # Set up Chrome options
     options = uc.ChromeOptions()
     options.add_argument("--disable-blink-features=AutomationControlled")
@@ -32,32 +30,39 @@ def PilkingtonScraper(partNo):
     options.add_argument("--headless")  # Run in headless mode
     options.add_argument("--disable-gpu")  # Disable GPU acceleration
     driver = uc.Chrome(options=options)
-    url = 'https://shop.pilkington.com/ecomm/search/basic/?queryType=2&query=' + partNo + '&inRange=true&page=1&pageSize=30&sort=PopularityRankAsc'
+    url = 'https://www.mygrantglass.com/pages/search.aspx?q=' + partNo + '&sc=B023&do=Search'
+
     try:
-        # Navigate to the URL
-        logger.info("Searching part in Pilkington: " + partNo)
+        logger.info("Searching part in MyGrant: " + partNo)
         driver.get(url)
-        
         try:
 
             # Wait for the element to be present
-            wait = WebDriverWait(driver, 10)  # wait up to 10 seconds
-            part_no = wait.until(EC.presence_of_element_located((By.XPATH, "//span[@ng-if='!perm.canViewProdDetails']"))).text
-            part_name = wait.until(EC.presence_of_element_located((By.XPATH, "//span[@class='description']"))).text
-            price = wait.until(EC.presence_of_element_located((By.XPATH, "//span[@class='amount']"))).text
-            location = wait.until(EC.presence_of_element_located((By.XPATH, "//span[@ng-if='!allowChoosePlant']"))).text
+            all_parts = []
+            wait = WebDriverWait(driver, 5)
+            location = wait.until(EC.presence_of_element_located((By.XPATH, "//span[@id='cpsr_LabelResultsHeader']"))).text.split("-")[1].strip()
+            table = wait.until(EC.presence_of_all_elements_located((By.TAG_NAME, "table")))[1]
+            products = table.find_elements(By.TAG_NAME, "tr")[1:]
+            for product in products:
+                part = [location]
+                part.append(product.find_elements(By.TAG_NAME, "td")[1].text)
+                part.append(product.find_elements(By.TAG_NAME, "td")[2].text)
+                part.append(product.find_elements(By.TAG_NAME, "td")[3].text)
+                all_parts.append(part)
 
             driver.quit()
-            return "Part Number: " + part_no + "\nPart Name: " + part_name + "\nPrice: " + price + "\nLocation: " + location
+            print(all_parts)
+            return all_parts
         except NoSuchElementException:
-            logger.error("Part number not found: " + partNo + " on Pilkington")
+            logger.error("Part number not found: " + partNo + " on MyGrant")
             driver.quit()
             return None
 
     except:
-        logger.error("Part number not found: " + partNo + " on Pilkington")
+        logger.error("Part number not found: " + partNo + " on MyGrant")
         driver.quit()
-        return None
+        return None        
     
+
 if __name__ == "__main__":
-    PilkingtonScraper("FW05322")
+    MyGrantScraper("FW05322")

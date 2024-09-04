@@ -1,9 +1,10 @@
-import time
 import logging
 import psutil
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,8 +20,6 @@ for proc in psutil.process_iter(['pid', 'name']):
     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         pass
 
-
-
 def IGCScraper(partNo):
 
     # Set up Chrome options
@@ -35,29 +34,37 @@ def IGCScraper(partNo):
     try:
         # Navigate to the URL
         driver.get(url)
-        time.sleep(5)
 
-        products = []
-        tables = driver.find_elements(By.TAG_NAME, "table")
-        for table in tables:
-            tbody = table.find_element(By.TAG_NAME, "tbody")
-            try:
-                tr = tbody.find_element(By.TAG_NAME, "tr")
-            except:
-                continue
-            td_elements = tr.find_elements(By.TAG_NAME, 'td')
+        # Wait for the tables to be present
+        wait = WebDriverWait(driver, 10)  # wait up to 10 seconds
+        table = wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
+        location = table.find_element(By.XPATH, "./preceding-sibling::*[1]").find_element(By.TAG_NAME, 'b').text
+        if location != "Opa-Locka":
+            print("Part not available in Opa-Locka")
+            driver.quit()
+            return None
 
-            # Extract the values
-            location = table.find_element(By.XPATH, "./preceding-sibling::*[1]").find_element(By.TAG_NAME, 'b').text
-            first_value = td_elements[0].find_element(By.TAG_NAME, 'a').text  # 1st value
-            fourth_value = td_elements[3].find_element(By.TAG_NAME, 'b').text  # 4th value
-            if td_elements[4].text == "In Stock":
-                fifth_value = "Yes"
-            else:
-                fifth_value = "No"  # 5th value
-            products.append([first_value, fourth_value, fifth_value, location])
+        tbody = table.find_element(By.TAG_NAME, "tbody")
+        try:
+            tr = tbody.find_element(By.TAG_NAME, "tr")
+        except:
+            print("Part number not found: " + partNo + " on IGC")
+
+        td_elements = tr.find_elements(By.TAG_NAME, 'td')
+        first_value = td_elements[0].find_element(By.TAG_NAME, 'a').text  # 1st value
+        fourth_value = td_elements[3].find_element(By.TAG_NAME, 'b').text  # 4th value
+        if td_elements[4].text == "In Stock":
+            fifth_value = "Yes"
+        else:
+            fifth_value = "No"  # 5th value
+
         driver.quit()
-        return products
+        return {
+            "part_number": first_value,
+            "price1": fourth_value,
+            "in_stock": fifth_value,
+            "location": location
+        }
 
     except:
         logger.error("Part number not found: " + partNo + " on IGC")
@@ -65,4 +72,4 @@ def IGCScraper(partNo):
         return None
 
 if __name__ == "__main__":
-    IGCScraper("FW05555")
+    IGCScraper("FW05322")
