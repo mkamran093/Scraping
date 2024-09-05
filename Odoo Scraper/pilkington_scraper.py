@@ -48,6 +48,7 @@ def PilkingtonScraper(partNo):
             location = wait.until(EC.presence_of_element_located((By.XPATH, "//span[@ng-if='!allowChoosePlant']"))).text
 
             driver.quit()
+            print("Part Number: " + part_no + "\nPart Name: " + part_name + "\nPrice: " + price + "\nLocation: " + location)
             return "Part Number: " + part_no + "\nPart Name: " + part_name + "\nPrice: " + price + "\nLocation: " + location
         except NoSuchElementException:
             logger.error("Part number not found: " + partNo + " on Pilkington")

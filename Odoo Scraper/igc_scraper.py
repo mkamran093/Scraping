@@ -59,6 +59,7 @@ def IGCScraper(partNo):
             fifth_value = "No"  # 5th value
 
         driver.quit()
+        print({"part_number": first_value, "price1": fourth_value, "in_stock": fifth_value, "location": location})
         return {
             "part_number": first_value,
             "price1": fourth_value,

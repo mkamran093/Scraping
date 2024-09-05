@@ -1,10 +1,8 @@
 import logging
 import psutil
 import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException
+from bs4 import BeautifulSoup
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -30,39 +28,34 @@ def MyGrantScraper(partNo):
     options.add_argument("--headless")  # Run in headless mode
     options.add_argument("--disable-gpu")  # Disable GPU acceleration
     driver = uc.Chrome(options=options)
-    url = 'https://www.mygrantglass.com/pages/search.aspx?q=' + partNo + '&sc=B023&do=Search'
-
+    url = 'https://www.mygrantglass.com/pages/search.aspx?q=' + partNo + '&sc=r&do=Search'
+    parts = []
     try:
         logger.info("Searching part in MyGrant: " + partNo)
         driver.get(url)
+        page_source = driver.page_source
+        soup = BeautifulSoup(page_source, 'html.parser')
+        driver.quit()
         try:
-
-            # Wait for the element to be present
-            all_parts = []
-            wait = WebDriverWait(driver, 5)
-            location = wait.until(EC.presence_of_element_located((By.XPATH, "//span[@id='cpsr_LabelResultsHeader']"))).text.split("-")[1].strip()
-            table = wait.until(EC.presence_of_all_elements_located((By.TAG_NAME, "table")))[1]
-            products = table.find_elements(By.TAG_NAME, "tr")[1:]
-            for product in products:
-                part = [location]
-                part.append(product.find_elements(By.TAG_NAME, "td")[1].text)
-                part.append(product.find_elements(By.TAG_NAME, "td")[2].text)
-                part.append(product.find_elements(By.TAG_NAME, "td")[3].text)
-                all_parts.append(part)
-
-            driver.quit()
-            print(all_parts)
-            return all_parts
-        except NoSuchElementException:
-            logger.error("Part number not found: " + partNo + " on MyGrant")
-            driver.quit()
+            div = soup.find('div', {'id': 'cpsr_DivParts'})
+            locations = div.find_all('h3')[1:]
+            tables = div.find_all('tbody')
+            for table in tables:
+                rows = table.find_all('tr')[1:]
+                for row in rows:
+                    data = row.find_all('td')[1:]
+                    part = [data[1].find('a').text.replace('\n', '').strip(), data[2].text.replace('\n', '').strip(), data[0].find('span').text.replace('\n', '').strip(), locations[0].text.split(' - ')[0].strip()]
+                    parts.append(part)
+                locations.pop(0)
+            print(parts)
+            return parts
+        except:
+            print("not found")
             return None
-
     except:
         logger.error("Part number not found: " + partNo + " on MyGrant")
-        driver.quit()
         return None        
     
 
 if __name__ == "__main__":
-    MyGrantScraper("FW05322")
+    MyGrantScraper("5322")
