@@ -73,4 +73,4 @@ def IGCScraper(partNo):
         return None
 
 if __name__ == "__main__":
-    IGCScraper("FW05322")
+    IGCScraper("DW01256")

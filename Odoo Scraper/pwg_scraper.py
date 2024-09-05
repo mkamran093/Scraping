@@ -51,7 +51,8 @@ def searchPart(driver, partNo):
                 partName = product.find_elements(By.TAG_NAME, 'font')[1].text
                 if (partNo in partName):
                     part.append(partName)
-
+                    description = product.find_element(By.XPATH, "//div[@class='options']").text.replace('»', '').strip()
+                    part.append(description)
                     try:
                         availability = product.find_element(By.XPATH, "//td[@ref-qty]").text
                         part.append(availability)
@@ -81,7 +82,8 @@ def searchPart(driver, partNo):
                 partName = product.find_elements(By.TAG_NAME, 'font')[2].text
                 if (partNo in partName):
                     part.append(partName)
-
+                    description = product.find_elements(By.TAG_NAME, 'font')[3].text
+                    part.append(description)
                     try:
                         availability = product.find_elements(By.TAG_NAME, 'font')[1].text
                         part.append(availability)
@@ -94,6 +96,7 @@ def searchPart(driver, partNo):
             except:
                 continue
         print(parts)
+        return parts
 
     except TimeoutException:
         logger.error("No results found for the part number: " + partNo + " on PWG.")
@@ -117,4 +120,4 @@ def PWGScraper(partNo):
         driver.quit()
 
 if __name__ == "__main__":
-    PWGScraper("1256")
+    PWGScraper("DW01256")

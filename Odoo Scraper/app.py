@@ -3,8 +3,13 @@ from igc_scraper import IGCScraper
 from pwg_scraper import PWGScraper
 from pilkington_scraper import PilkingtonScraper
 from mygrant_scraper import MyGrantScraper
+import logging
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key'  # Set a secret key for session management
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -53,20 +58,24 @@ HTML_TEMPLATE = """
     {% if pwg_data %}
     <h2>PWG Data</h2>
     <form method="POST" action="/add-to-cart">
-        <input type="hidden" name="part_number" value="{{ pwg_data.get('part_details', 'N/A') }}">
         <table>
             <tr>
                 <th>Part Number</th>
+                <th>Description</th>
                 <th>Availability</th>
                 <th>Location</th>
                 <th>Action</th>
             </tr>
+            {% for item in pwg_data %}
             <tr>
-                <td>{{ pwg_data.get('part_details', 'N/A') }}</td>
-                <td>{{ pwg_data.get('ref_qty', 'N/A') }}</td>
-                <td>{{ pwg_data.get('location', 'N/A') }}</td>
+        <input type="hidden" name="part_number" value="{{ item.get('part_name', 'N/A') }}">
+                <td>{{ item.get('part_name', 'N/A') }}</td>
+                <td>{{ item.get('description', 'N/A') }}</td>
+                <td>{{ item.get('availability', 'N/A') }}</td>
+                <td>{{ item.get('location', 'N/A') }}</td>
                 <td><button type="submit" class="add-to-cart-btn">Add to Cart</button></td>
             </tr>
+            {% endfor %}
         </table>
     </form>
     {% else %}
@@ -93,7 +102,7 @@ HTML_TEMPLATE = """
                 <td>{{ igc_data.in_stock }}</td>
                 <td>{{ igc_data.location }}</td>
                 <td>
-                    <input type="hidden" name="part_number" value="{{ item.part_number }}">
+                    <input type="hidden" name="part_number" value="{{ igc_data.part_number }}">
                     <button type="submit" class="add-to-cart-btn">Add to Cart</button>
                 </td>
             </tr>
@@ -170,16 +179,19 @@ HTML_TEMPLATE = """
 """
 
 def parse_pwg_data(data_string):
-    lines = data_string.split("\n")
-    ref_qty = lines[0].split(": ")[1] if len(lines) > 0 else "N/A"
-    part_details = lines[1].split(": ")[1] if len(lines) > 1 else "N/A"
-    location = lines[2].split(":: ")[1] if len(lines) > 2 else "N/A"
-    return {
-        "ref_qty": ref_qty,
-        "part_details": part_details,
-        "location": location
-    }
-
+    parsed_data = []
+    for item in data_string:
+        part_name = item[0] if len(item) > 0 else "N/A"
+        description = item[1] if len(item) > 1 else "N/A"
+        availability = item[2] if len(item) > 2 else "N/A"
+        location = item[3] if len(item) > 3 else "N/A"
+        parsed_data.append({
+            "part_name": part_name,
+            "description": description,
+            "availability": availability,
+            "location": location
+        })
+    return parsed_data
 
 def parse_pilkington_data(data_string):
     lines = data_string.split("\n")
@@ -235,24 +247,28 @@ def index():
         try:
             pwg_string = PWGScraper(user_input)
             pwg_data = parse_pwg_data(pwg_string)
-        except:
+        except Exception as e:
+            logging.error(f"Error fetching PWG data: {e}")
             pwg_data = None
         
         try:
             igc_data = IGCScraper(user_input)
-        except:
+        except Exception as e:
+            logging.error(f"Error fetching IGC data: {e}")
             igc_data = None
 
         try:
             pilkington_string = PilkingtonScraper(user_input)
             pilkington_data = parse_pilkington_data(pilkington_string)
-        except:
+        except Exception as e:
+            logging.error(f"Error fetching Pilkington data: {e}")
             pilkington_data = None
 
         try:
             mygrant_list = MyGrantScraper(user_input)
             mygrant_data = parse_mygrant_data(mygrant_list)
-        except:
+        except Exception as e:
+            logging.error(f"Error fetching MyGrant data: {e}")
             mygrant_data = None
 
     return render_template_string(HTML_TEMPLATE, pwg_data=pwg_data, igc_data=igc_data, pilkington_data=pilkington_data, mygrant_data=mygrant_data)
