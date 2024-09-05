@@ -2,6 +2,7 @@ import time
 import logging
 import psutil
 import undetected_chromedriver as uc
+from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -27,7 +28,6 @@ for proc in psutil.process_iter(['pid', 'name']):
 
 def searchPart(driver, partNo):
     try:
-        # Navigate to the URL
         print("Searching part in PWG: " + partNo)
         driver.get(url)
         # Wait for the element to be present
@@ -42,59 +42,59 @@ def searchPart(driver, partNo):
 
         parts = []
         location = wait.until(EC.presence_of_element_located((By.XPATH, "//span[@class='b2btext']"))).text.split(":: ")[1].strip()
-
-        products = wait.until(EC.presence_of_all_elements_located((By.TAG_NAME, "table")))[2].find_elements(By.TAG_NAME, "tr")
+        
+        products = wait.until(EC.presence_of_all_elements_located((By.TAG_NAME, "table")))[2].find_elements(By.TAG_NAME, "tr")[2:]
+        wait.until(EC.presence_of_element_located((By.XPATH, "//button[@class='button check']"))).click()
         for product in products:
             part = []
             try:
-                partName = product.find_element(By.XPATH, "//td[@class='partdesc']").find_element(By.TAG_NAME, "font").text
-                if(partNo in partName):
+                partName = product.find_elements(By.TAG_NAME, 'font')[1].text
+                if (partNo in partName):
                     part.append(partName)
-                    description = product.find_element(By.XPATH, "//td[@class='partdesc']").find_element(By.XPATH, "//div[@class='options']")[1].text
-                    part.append(description)
-                    print(description)
-                    check_button = wait.until(EC.presence_of_element_located((By.XPATH, "//button[@class='button check']")))
-                    check_button.click()
 
                     try:
-                        availability = product.find(EC.presence_of_element_located((By.XPATH, "//td[@ref-qty]"))).text
-                    except:
-                        availability = "Not available"
-                    finally:
-                        print(availability)
+                        availability = product.find_element(By.XPATH, "//td[@ref-qty]").text
                         part.append(availability)
+                    except NoSuchElementException:
+                        part.append("Not available")
+                    part.append(location)
+                    parts.append(part)
                 else:
                     break
             except:
                 continue
-            part.append(location)
-            print(part)
-            parts.append(part)
-        driver.quit()
-
-
-        # Select the a tag which has the part number in its text
-        # try:
-        #     part_link = wait.until(EC.presence_of_element_located((By.XPATH, "//font[contains(text(), '" + partNo + "')]"))).text
-        # except NoSuchElementException:
-        #     logger.error("No results found for the part number: " + partNo)
-        #     return
         
-        # location = wait.until(EC.presence_of_element_located((By.XPATH, "//span[@class='b2btext']"))).text
-        # # Check for first button with class = "button check"
-        # try:
-        #     check_button = wait.until(EC.presence_of_element_located((By.XPATH, "//button[@class='button check']")))
-        #     check_button.click()
-        # except NoSuchElementException:
-        #     pass
+        ## Perfect above this line
 
-        # # Search for a td tag with a property named "ref-qty" and get its text
-        # try:
-        #     ref_qty = wait.until(EC.presence_of_element_located((By.XPATH, "//td[@ref-qty]"))).text
-        # except NoSuchElementException:
-        #     ref_qty = "Not available"
-        # print("Available quantity: " + ref_qty + "\nPart No: " + part_link + "\nLocation: " + location)
-        # return "Available quantity: " + ref_qty + "\nPart No: " + part_link + "\nLocation: " + location
+        wait.until(EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Check Other Locations')]"))).click()
+
+        try:
+            matching_table = driver.find_element(By.XPATH, "//table[.//td//span[contains(text(), 'Branch:: MIAMI FL')]]")
+        except:
+            print("matching table not found")
+            return parts
+
+        products = matching_table.find_elements(By.TAG_NAME, "tr")[2:]
+        for product in products:
+            part = []
+            try:
+                partName = product.find_elements(By.TAG_NAME, 'font')[2].text
+                if (partNo in partName):
+                    part.append(partName)
+
+                    try:
+                        availability = product.find_elements(By.TAG_NAME, 'font')[1].text
+                        part.append(availability)
+                    except NoSuchElementException:
+                        part.append("Not available")
+                    part.append("Miami FL")
+                    parts.append(part)
+                else:
+                    break
+            except:
+                continue
+        print(parts)
+
     except TimeoutException:
         logger.error("No results found for the part number: " + partNo + " on PWG.")
         return None
@@ -117,4 +117,4 @@ def PWGScraper(partNo):
         driver.quit()
 
 if __name__ == "__main__":
-    PWGScraper("FW05322")
+    PWGScraper("1256")
