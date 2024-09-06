@@ -309,6 +309,19 @@ def stream_results():
 
     return Response(generate(), content_type='text/event-stream')
     
+@app.before_request
+def before_request():
+    # Ensure that the WebDriver is in a clean state before each request
+    global driver
+    if driver is not None:
+        driver.quit()
+    options = uc.ChromeOptions()
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--user-data-dir=C:\\Users\\NeXbit\\AppData\\Local\\Google\\Chrome\\User Data")
+    options.add_argument("--headless")  # Run in headless mode
+    options.add_argument("--disable-gpu")  # Disable GPU acceleration  
+    driver = uc.Chrome(options=options)
+
 @app.route('/add-to-cart', methods=['POST'])
 def add_to_cart():
     part_number = request.form['part_number']
