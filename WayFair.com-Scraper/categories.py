@@ -1,26 +1,29 @@
+import logging
 from constants import ZYTE_API_URL, ZYTE_API_KEY
 from bs4 import BeautifulSoup
 from base64 import b64decode
 import requests
-import logging
 import json
 import csv
 import os
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 def scrape_product(product, category):
-    csv_file = category + '_products_data.csv'
+    csv_file = f"{category}_products_data.csv"
 
-    # Check if the product URL already exists in the CSV file
-    if os.path.exists(csv_file):
-        with open(csv_file, mode='r', encoding='utf-8') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                if row.get('Product Url') == product:
-                    print(f"Product URL {product} already exists in the CSV. Skipping.")
-                    return
-
-    print("Scraping Product...")
     try:
+        # Check if the product URL already exists in the CSV file
+        if os.path.exists(csv_file):
+            with open(csv_file, mode='r', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    if row.get('Product Url') == product:
+                        logging.info(f"Product URL {product} already exists in the CSV. Skipping.")
+                        return
+
+        logging.info(f"Scraping Product: {product}")
         api_response = requests.post(
             ZYTE_API_URL,
             auth=(ZYTE_API_KEY, ""),   
@@ -29,170 +32,125 @@ def scrape_product(product, category):
                 "httpResponseBody": True,
             },
         )
+        api_response.raise_for_status()
 
-        if api_response.status_code == 200:
-            http_response_body = b64decode(api_response.json()["httpResponseBody"])
-            soup = BeautifulSoup(http_response_body, 'html.parser')
-            
-            # Find the JSON-LD script tag
-            script_tag = soup.find('script', type='application/ld+json')
-            
-            if script_tag:
-                # Parse the JSON content
-                json_data = json.loads(script_tag.string)
-            
-                # Extract the desired information
-                try:
-                    product_name = json_data.get('name', 'N/A')
-                    sku = json_data.get('sku', 'N/A')
-                    brand_name = json_data.get('brand', {}).get('name', 'N/A')
-                    image_url = json_data.get('image', 'N/A')
-                    description = json_data.get('description', 'N/A')
-                    review_count = json_data.get('aggregateRating', {}).get('reviewCount', 'N/A')
-                    rating = json_data.get('aggregateRating', {}).get('ratingValue', 'N/A')
-                    price = json_data.get('offers', {}).get('price', 'N/A')
-                    price_currency = json_data.get('offers', {}).get('priceCurrency', 'N/A')
-                    availability = json_data.get('offers', {}).get('availability', 'N/A')
-                    
-                    product_overview = []
-                    divs = soup.find('div', {'id': 'Pres_vizcon_visual::default'})
-                    if divs:
-                        for p in divs.find_all('p'):
-                            product_overview.append(p.get_text(strip=True))
-
-                    in_stock = availability == "http://schema.org/InStock"
-
-                    img_section = soup.find('div', class_='ProductDetailImageCarousel-thumbnails ProductDetailImageCarousel-thumbnails--halfColumnWidthCarousel')
-                    urls = []
-                    img_urls = []
-                    if img_section:
-                        for li in img_section.find_all('li'):
-                            urls.append(li.find('img')['src'])
-                        
-                        for url in urls:
-                            new_url = url.replace('resize-h56-w56%5Ecompr-r50', 'resize-h800-w800%5Ecompr-r85')
-                            img_urls.append(new_url)
-                    else:
-                        print("No images found")
+        http_response_body = b64decode(api_response.json()["httpResponseBody"])
+        soup = BeautifulSoup(http_response_body, 'html.parser')
         
-                    with open(csv_file, mode='a', newline='', encoding='utf-8') as file:
-                        writer = csv.writer(file)
+        # Find the JSON-LD script tag
+        script_tag = soup.find('script', type='application/ld+json')
+        
+        if not script_tag:
+            raise ValueError(f"No JSON-LD data found for product {product}")
+        
+        # Parse the JSON content
+        json_data = json.loads(script_tag.string)
+        
+        # Extract the desired information
+        product_name = json_data.get('name', 'N/A')
+        sku = json_data.get('sku', 'N/A')
+        brand_name = json_data.get('brand', {}).get('name', 'N/A')
+        image_url = json_data.get('image', 'N/A')
+        description = json_data.get('description', 'N/A')
+        review_count = json_data.get('aggregateRating', {}).get('reviewCount', 'N/A')
+        rating = json_data.get('aggregateRating', {}).get('ratingValue', 'N/A')
+        price = json_data.get('offers', {}).get('price', 'N/A')
+        price_currency = json_data.get('offers', {}).get('priceCurrency', 'N/A')
+        availability = json_data.get('offers', {}).get('availability', 'N/A')
+        
+        product_overview = []
+        divs = soup.find('div', {'id': 'Pres_vizcon_visual::default'})
+        if divs:
+            for p in divs.find_all('p'):
+                product_overview.append(p.get_text(strip=True))
 
-                        if os.path.getsize(csv_file) == 0:
-                            writer.writerow([
-                            'Product Name', 'Price', 'Currency', 'SKU', 'Brand', 'Category', 'Rating', 'Availability',
-                            'Reviews', 'Product Description', 'Overview', 'Product Url', 'Image', 'Image URLs'
-                        ])
+        in_stock = availability == "http://schema.org/InStock"
 
-                        writer.writerow([
-                            product_name,
-                            price,
-                            price_currency,
-                            sku,
-                            brand_name,
-                            category,
-                            rating,
-                            'In Stock' if in_stock else 'Out of Stock',
-                            review_count,
-                            description,
-                            ' | '.join(product_overview),
-                            product,
-                            image_url,
-                            ' | '.join(img_urls)
-                        ])
-
-                    logging.info(f"Product {product_name} scraped successfully")
-                except Exception as e:
-                    logging.error(f"Error extracting details for product {product}: {e}")
-                    print(f"Skipping product {product} due to error in extracting details")
-                    return
-            else:
-                logging.error(f"No JSON-LD data found for product {product}")
-                print(f"Skipping product {product} due to missing JSON-LD data")
-                return
+        img_section = soup.find('div', class_='ProductDetailImageCarousel-thumbnails ProductDetailImageCarousel-thumbnails--halfColumnWidthCarousel')
+        img_urls = []
+        if img_section:
+            urls = [li.find('img')['src'] for li in img_section.find_all('li')]
+            img_urls = [url.replace('resize-h56-w56%5Ecompr-r50', 'resize-h800-w800%5Ecompr-r85') for url in urls]
         else:
-            logging.error(f"Failed to retrieve the webpage for product {product}. Status code: {api_response.status_code}")
-            print(f"Skipping product {product} due to API response error")
-            return
+            logging.warning("No images found for product")
+
+        with open(csv_file, mode='a', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+
+            if os.path.getsize(csv_file) == 0:
+                writer.writerow([
+                'Product Name', 'Price', 'Currency', 'SKU', 'Brand', 'Category', 'Rating', 'Availability',
+                'Reviews', 'Product Description', 'Overview', 'Product Url', 'Image', 'Image URLs'
+            ])
+
+            writer.writerow([
+                product_name, price, price_currency, sku, brand_name, category,
+                rating, 'In Stock' if in_stock else 'Out of Stock', review_count,
+                description, ' | '.join(product_overview), product, image_url,
+                ' | '.join(img_urls)
+            ])
+
+        logging.info(f"Product {product_name} scraped successfully")
+
+    except requests.RequestException as e:
+        logging.error(f"Network error when scraping product {product}: {e}")
+    except json.JSONDecodeError as e:
+        logging.error(f"Error parsing JSON data for product {product}: {e}")
+    except ValueError as e:
+        logging.error(str(e))
     except Exception as e:
-        logging.error(f"Failed to scrape product {product}: {e}")
-        print(f"Skipping product {product} due to general error")
-        return
+        logging.error(f"Unexpected error when scraping product {product}: {e}")
+
 def scrape_sub_categories(url):
     try:
-         api_response = requests.post(
+        logging.info(f"Scraping sub-category: {url}")
+        api_response = requests.post(
+            ZYTE_API_URL,
+            auth=(ZYTE_API_KEY, ""),
+            json={
+                "url": url,
+                "httpResponseBody": True,
+            },
+        )
+        api_response.raise_for_status()
+
+        http_response_body = b64decode(api_response.json()["httpResponseBody"])
+        soup = BeautifulSoup(http_response_body, 'html.parser')
+
+        heading = soup.find('h1', {'data-hb-id': 'Heading'})
+        if not heading:
+            raise ValueError("Could not find category heading")
+        heading_text = heading.get_text(strip=True)
+        logging.info(f'Scraping Sub-Category: {heading_text}')
+
+        while True:
+            products = soup.find_all('div', {'data-hb-id': 'Card'})
+            for product in products:
+                product_url = product.find('a')['href']
+                scrape_product(product_url, heading_text)
+
+            next_page = soup.find('a', {'data-enzyme-id': 'paginationNextPageLink'})
+            if not next_page:
+                logging.info("Reached last page of sub-category")
+                break
+
+            next_page_url = next_page['href']
+            logging.info(f"Moving to next page: {next_page_url}")
+            api_response = requests.post(
                 ZYTE_API_URL,
                 auth=(ZYTE_API_KEY, ""),
                 json={
-                    "url": url,
+                    "url": next_page_url,
                     "httpResponseBody": True,
                 },
             )
-         if api_response.status_code == 200:
-                http_response_body = b64decode(api_response.json()["httpResponseBody"])
-                soup = BeautifulSoup(http_response_body, 'html.parser')
-                logging.info("Successfully retrieved and parsed the webpage content")
+            api_response.raise_for_status()
+            http_response_body = b64decode(api_response.json()["httpResponseBody"])
+            soup = BeautifulSoup(http_response_body, 'html.parser')
 
-                heading = soup.find('h1', {'data-hb-id': 'Heading'}).get_text(strip=True)
-                print('Scraping Sub-Category:', heading)
-
-                logging.info(f"Extracting prodcut urls.....")
-                while True:
-                    for product in soup.find_all('div', {'data-hb-id': 'Card'}):
-                        product_url = product.find('a')['href']
-                        scrape_product(product_url, heading)
-
-                    try:
-                        next_page = soup.find('a', {'data-enzyme-id': 'paginationNextPageLink'})['href']
-                        api_response = requests.post(
-                            ZYTE_API_URL,
-                            auth=(ZYTE_API_KEY, ""),
-                            json={
-                                "url": next_page,
-                                "httpResponseBody": True,
-                            },
-                        )
-                        if api_response.status_code == 200:
-                            http_response_body = b64decode(api_response.json()["httpResponseBody"])
-                            soup = BeautifulSoup(http_response_body, 'html.parser')
-                        else:
-                            logging.error(f"Failed to retrieve the webpage. Status code: {api_response.status_code}")
-                            break
-                           
-                    except:
-                        break
+    except requests.RequestException as e:
+        logging.error(f"Network error when scraping sub-category {url}: {e}")
+    except ValueError as e:
+        logging.error(str(e))
     except Exception as e:
-        logging.error(f"Failed to scrape sub-category {heading}: {e}")
-        print(e)
-
-# def scrape_category(name, url):
-#     logging.info(f"Scraping category {name} ...")
-#     try:
-#         api_response = requests.post(
-#             ZYTE_API_URL,
-#             auth=(ZYTE_API_KEY, ""),
-#             json={
-#                 "url": url,
-#                 "httpResponseBody": True,
-#             },
-#         )
-#         if api_response.status_code == 200:
-#             http_response_body = b64decode(api_response.json()["httpResponseBody"])
-#             soup = BeautifulSoup(http_response_body, 'html.parser')
-#             logging.info("Successfully retrieved and parsed the webpage content")
-#         for item in soup.find_all('div', class_='CategoryLandingPageNavigation-linkWrap _1d89u260'):
-#             sub_category_url = item.find('a')['href']
-
-#             scrape_sub_categories(sub_category_url)
-#     except Exception as e:
-#         logging.error(f"Failed to scrape category: {e}")
-
-# def scrape_categories(soup):
-#     try:
-#         for item in soup.find_all('div', class_='CategoryLandingPageNavigation-linkWrap _1d89u260'):
-#             category_name = item.find('p', {'data-hb-id': 'Text'}).get_text(strip=True)
-#             category_url = item.find('a')['href']
-
-#             scrape_category(category_name, category_url)
-#     except Exception as e:
-#         logging.error(f"Failed to scrape category: {e}")
+        logging.error(f"Unexpected error when scraping sub-category {url}: {e}")

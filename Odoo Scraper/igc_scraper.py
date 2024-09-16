@@ -9,7 +9,7 @@ def IGCScraper(partNo, driver, logger):
     try:
         # Navigate to the URL
         driver.get(url)
-
+        parts = []
         # Wait for the tables to be present
         wait = WebDriverWait(driver, 10)  # wait up to 10 seconds
         table = wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
@@ -20,23 +20,27 @@ def IGCScraper(partNo, driver, logger):
 
         tbody = table.find_element(By.TAG_NAME, "tbody")
         try:
-            tr = tbody.find_element(By.TAG_NAME, "tr")
+            trs = tbody.find_elements(By.TAG_NAME, "tr")
         except:
             return None
 
-        td_elements = tr.find_elements(By.TAG_NAME, 'td')
-        first_value = td_elements[0].find_element(By.TAG_NAME, 'a').text  # 1st value
-        fourth_value = td_elements[3].find_element(By.TAG_NAME, 'b').text  # 4th value
-        if td_elements[4].text == "In Stock":
-            fifth_value = "Yes"
-        else:
-            fifth_value = "No"  # 5th value
-        return {
-            "part_number": first_value,
-            "price1": fourth_value,
-            "in_stock": fifth_value,
-            "location": location
-        }
+        for tr in trs:
+            td_elements = tr.find_elements(By.TAG_NAME, 'td')
+            first_value = td_elements[0].find_element(By.TAG_NAME, 'a').text  # 1st value
+            if (partNo not in first_value):
+                continue
+            fourth_value = td_elements[3].find_element(By.TAG_NAME, 'b').text  # 4th value
+            if td_elements[4].text == "In Stock":
+                fifth_value = "Yes"
+            else:
+                fifth_value = "No"  
+            parts.append({
+                "part_number": first_value,
+                "price1": fourth_value,
+                "in_stock": fifth_value,
+                "location": location
+            })
+        return parts
     except:
         logger.error("Part number not found: " + partNo + " on IGC")
         return None

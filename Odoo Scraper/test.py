@@ -1,10 +1,34 @@
+import psutil
+import time
+import logging
+import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
-def searchPart(driver, partNo, logger):
+for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            if 'chrome' in proc.info['name']:
+                proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+webdriver_path = "undetected_chromedriver.exe"
+
+options = uc.ChromeOptions()
+options.add_argument("--disable-blink-features=AutomationControlled")
+options.add_argument("--user-data-dir=C:\\Users\\NeXbit\\AppData\\Local\\Google\\Chrome\\User Data")
+# options.add_argument("--headless")  # Run in headless mode
+options.add_argument("--disable-gpu")  # Disable GPU acceleration  
+driver = uc.Chrome(options=options)
+
+def searchPart(partNo):
 
     url = 'https://buypgwautoglass.com/PartSearch/search.asp?REG=&UserType=F&ShipToNo=85605&PB=544'
     try:
@@ -38,7 +62,7 @@ def searchPart(driver, partNo, logger):
                         part.append(availability)
                     except NoSuchElementException:
                         part.append("Not available")
-                    part.append(product.find_elements(By.TAG_NAME, 'font')[2].text)
+                    print(product.find_elements(By.TAG_NAME, 'font')[2].text)
                     part.append(location)
                     parts.append(part)
                 else:
@@ -71,7 +95,7 @@ def searchPart(driver, partNo, logger):
                         part.append(availability)
                     except NoSuchElementException:
                         part.append("Not available")
-                    part.append(data[3].text)
+                    print(data[3].text)
                     part.append("Miami FL")
                     parts.append(part)
             except:
@@ -82,10 +106,10 @@ def searchPart(driver, partNo, logger):
         logger.error("No results found for the part number: " + partNo + " on PWG.")
         return None
 
-def PWGScraper(partNo, driver, logger):
+def PWGScraper(partNo):
 
     try:
-        result = searchPart(driver, partNo, logger)
+        result = searchPart(partNo)
         return result
     except:
         return None

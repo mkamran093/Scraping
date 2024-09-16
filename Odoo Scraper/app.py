@@ -8,6 +8,8 @@ import logging
 import psutil
 import logging
 import json
+import signal
+import sys
 
 for proc in psutil.process_iter(['pid', 'name']):
         try:
@@ -109,27 +111,16 @@ def parse_pwg_data(data_string):
         part_name = item[0] if len(item) > 0 else "N/A"
         description = item[1] if len(item) > 1 else "N/A"
         availability = item[2] if len(item) > 2 else "N/A"
-        location = item[3] if len(item) > 3 else "N/A"
+        price = item[3] if len(item) > 3 else "N/A"
+        location = item[4] if len(item) > 4 else "N/A"
         parsed_data.append({
             "part_name": part_name,
             "description": description,
             "availability": availability,
+            "price": price,
             "location": location
         })
     return parsed_data
-
-def parse_pilkington_data(data_string):
-    lines = data_string.split("\n")
-    part_no = lines[0].split(": ")[1] if len(lines) > 0 else "N/A"
-    part_name = lines[1].split(": ")[1] if len(lines) > 1 else "N/A"
-    price = lines[2].split(": ")[1] if len(lines) > 2 else "N/A"
-    location = lines[3].split(": ")[1] if len(lines) > 3 else "N/A"
-    return {
-        "part_no": part_no,
-        "part_name": part_name,
-        "price": price,
-        "location": location
-    }
 
 def parse_mygrant_data(data_list):
     parsed_data = []
@@ -148,6 +139,12 @@ def parse_mygrant_data(data_list):
 
 def generate_table_html(data, source):
 
+    if len(data) == 0:
+        return f"""
+        <h2>{source.upper()} Data</h2>
+        <p>No data found</p>
+        """
+
     if source == 'pwg':
         return f"""
         <h2>PWG Data</h2>
@@ -157,6 +154,7 @@ def generate_table_html(data, source):
                     <th>Part Number</th>
                     <th>Description</th>
                     <th>Availability</th>
+                    <th>Price</th>
                     <th>Location</th>
                     <th>Action</th>
                 </tr>
@@ -166,6 +164,7 @@ def generate_table_html(data, source):
                     <td>{item.get('part_name', 'N/A')}</td>
                     <td>{item.get('description', 'N/A')}</td>
                     <td>{item.get('availability', 'N/A')}</td>
+                    <td>{item.get('price', 'N/A')}</td>
                     <td>{item.get('location', 'N/A')}</td>
                     <td><button type="submit" class="add-to-cart-btn">Add to Cart</button></td>
                 </tr>
@@ -180,21 +179,23 @@ def generate_table_html(data, source):
             <table>
                 <tr>
                     <th>Part Number</th>
-                    <th>Price 1</th>
+                    <th>Price</th>
                     <th>In Stock</th>
                     <th>Location</th>
                     <th>Action</th>
                 </tr>
+                {"\n".join([f"""          
                 <tr>
-                    <td>{data.get('part_number', 'N/A')}</td>
-                    <td>{data.get('price1', 'N/A')}</td>
-                    <td>{data.get('in_stock', 'N/A')}</td>
-                    <td>{data.get('location', 'N/A')}</td>
+                    <td>{item.get('part_number', 'N/A')}</td>
+                    <td>{item.get('price1', 'N/A')}</td>
+                    <td>{item.get('in_stock', 'N/A')}</td>
+                    <td>{item.get('location', 'N/A')}</td>
                     <td>
-                        <input type="hidden" name="part_number" value="{data.get('part_number', 'N/A')}">
+                        <input type="hidden" name="part_number" value="{item.get('part_number', 'N/A')}">
                         <button type="submit" class="add-to-cart-btn">Add to Cart</button>
                     </td>
                 </tr>
+                """ for item in data])}
             </table>
         </form>
         """
@@ -227,10 +228,10 @@ def generate_table_html(data, source):
         <form method="POST" action="/add-to-cart">
             <table>
                 <tr>
-                    <th>Location</th>
                     <th>Part Number</th>
-                    <th>Price</th>
                     <th>Availability</th>
+                    <th>Location</th>
+                    <th>Price</th>
                     <th>Action</th>
                 </tr>
                 {"\n".join([f"""
@@ -292,8 +293,7 @@ def stream_results():
             yield f"data: {json.dumps({'source': 'igc', 'html': '<p>Error fetching IGC data</p>'})}\n\n"
 
         try:
-            pilkington_string = PilkingtonScraper(user_input, driver, logger)
-            pilkington_data = parse_pilkington_data(pilkington_string)
+            pilkington_data = PilkingtonScraper(user_input, driver, logger)
             yield f"data: {json.dumps({'source': 'pilkington', 'html': generate_table_html(pilkington_data, 'pilkington')})}\n\n"
         except Exception as e:
             logging.error(f"Error fetching Pilkington data: {e}")
@@ -330,6 +330,20 @@ def add_to_cart():
         cart.append(part_number)
     session['cart'] = cart
     return redirect(url_for('index'))
+
+def shutdown_handler(signal_number, frame):
+    driver.quit()
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            if 'chrome' in proc.info['name']:
+                proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    print("Shutting down gracefully...")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, shutdown_handler)  # Handles Ctrl+C
+signal.signal(signal.SIGTERM, shutdown_handler)  # Handles termination signal
 
 if __name__ == '__main__':
     app.run(debug=True)

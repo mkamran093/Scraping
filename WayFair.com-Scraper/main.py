@@ -5,6 +5,9 @@ from base64 import b64decode
 import logging
 from constants import ZYTE_API_URL, ZYTE_API_KEY
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 categories_url = {
     "1": "https://www.wayfair.com/furniture/cat/furniture-c45974.html", 
     "2": "https://www.wayfair.com/outdoor/cat/outdoor-c32334.html",
@@ -47,7 +50,6 @@ def select_sub_category(url):
             
             formatted_string = ""
             max_length = max(len(sub_category) for sub_category in sub_categories_name)
-
             for i in range(0, len(sub_categories_name), 3):
                 line = ""
                 for j in range(3):
@@ -57,20 +59,28 @@ def select_sub_category(url):
                         name = sub_categories_name[index]
                         line += f"{number:2}. {name.ljust(max_length)}  "
                 formatted_string += line.rstrip() + "\n"
-
             print(formatted_string)
-            sub_category = input("\nEnter number of the corresponding sub-sub-category to scrape: ")  
+
             while True:
+                sub_category = input("\nEnter number of the corresponding sub-sub-category to scrape: ")
                 if sub_category in sub_categories_url:
+                    logging.info(f"Selected sub-category: {sub_categories_name[int(sub_category)-1]}")
+                    scrape_sub_categories(sub_categories_url[sub_category])
                     break
                 else:
-                    sub_category = input("Invalid input. Please enter a valid number.") 
-            scrape_sub_categories(sub_categories_url[sub_category])
-    except:
-        logging.error(f"Failed to retrieve the webpage. Status code: {api_response.status_code}")
+                    logging.warning(f"Invalid input: {sub_category}")
+                    print("Invalid input. Please enter a valid number.")
+
+    except requests.RequestException as e:
+        logging.error(f"Network error when retrieving sub-categories: {e}")
+    except ValueError as e:
+        logging.error(f"Error parsing sub-categories: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error in select_sub_category: {e}")
 
 def select_category(url):
     try:
+        logging.info(f"Selecting category from URL: {url}")
         api_response = requests.post(
             ZYTE_API_URL,
             auth=(ZYTE_API_KEY, ""),
@@ -79,45 +89,54 @@ def select_category(url):
                 "httpResponseBody": True,
             },
         )
+        api_response.raise_for_status()
 
-        if api_response.status_code == 200:
-            http_response_body = b64decode(api_response.json()["httpResponseBody"])
-            soup = BeautifulSoup(http_response_body, 'html.parser')
+        http_response_body = b64decode(api_response.json()["httpResponseBody"])
+        soup = BeautifulSoup(http_response_body, 'html.parser')
 
-            categories_url = {}
-            categories_name = []
-            categories = soup.find('div', {'data-cypress-id': 'subnavWrap'}).find_all('div', class_="CategoryLandingPageNavigation-linkWrap _1d89u260")
-            for index, category in enumerate(categories, start=1):
-                categories_name.append(category.find('p').get_text())
-                url = category.find('a', {'data-hb-id': 'Card'})['href']
-                categories_url[str(index)] = url
+        categories_url = {}
+        categories_name = []
+        categories = soup.find('div', {'data-cypress-id': 'subnavWrap'})
+        if not categories:
+            raise ValueError("Could not find categories section")
+        
+        categories = categories.find_all('div', class_="CategoryLandingPageNavigation-linkWrap _1d89u260")
+        for index, category in enumerate(categories, start=1):
+            name = category.find('p').get_text()
+            url = category.find('a', {'data-hb-id': 'Card'})['href']
+            categories_name.append(name)
+            categories_url[str(index)] = url
             
-            formatted_string = ""
-            max_length = max(len(category) for category in categories_name)  # Find the maximum length of category names
+        formatted_string = ""
+        max_length = max(len(category) for category in categories_name)
+        for i in range(0, len(categories_name), 3):
+            line = ""
+            for j in range(3):
+                index = i + j
+                if index < len(categories_name):
+                    number = index + 1
+                    name = categories_name[index]
+                    line += f"{number:2}. {name.ljust(max_length)}  "
+            formatted_string += line.rstrip() + "\n"
+        print(formatted_string)
 
-            for i in range(0, len(categories_name), 3):
-                line = ""
-                for j in range(3):
-                    index = i + j
-                    if index < len(categories_name):
-                        number = index + 1
-                        name = categories_name[index]
-                        line += f"{number:2}. {name.ljust(max_length)}  "
-                formatted_string += line.rstrip() + "\n"
-
-            print(formatted_string)
+        while True:
             category = input("\nEnter number of the corresponding sub-category to scrape: ")
-            while True:
-                if category in categories_url:
-                    break
-                else:
-                    category = input("Invalid input. Please enter a valid number.")
-            select_sub_category(categories_url[category])
+            if category in categories_url:
+                logging.info(f"Selected category: {categories_name[int(category)-1]}")
+                select_sub_category(categories_url[category])
+                break
+            else:
+                logging.warning(f"Invalid input: {category}")
+                print("Invalid input. Please enter a valid number.")
 
-    except:
-        logging.error(f"Failed to retrieve the webpage. Status code: {api_response.status_code}")
-
-
+    except requests.RequestException as e:
+        logging.error(f"Network error when retrieving categories: {e}")
+    except ValueError as e:
+        logging.error(f"Error parsing categories: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error in select_category: {e}")
+        
 def main():
     print("Welcome to Wayfair Scraper!\n")
     print(" 1. Furniture          2. Outdoor              3. Bedding & Bath\n"
@@ -126,16 +145,20 @@ def main():
           "10. Home Improvement  11. Appliances          12. Pet\n"
           "13. Holiday           14. Shop By Room\n")
 
-    category = input("\nEnter number of the corresponding category to scrape: ")
-
-    
-
     while True:
+        category = input("\nEnter number of the corresponding category to scrape: ")
         if category in categories_url:
+            logging.info(f"Selected main category: {category}")
+            select_category(categories_url[category])
             break
         else:
-            category = input("Invalid input. Please enter a valid number.")
-    select_category(categories_url[category])
+            logging.warning(f"Invalid input: {category}")
+            print("Invalid input. Please enter a valid number.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        logging.info("Script terminated by user.")
+    except Exception as e:
+        logging.error(f"Unhandled exception in main: {e}")
