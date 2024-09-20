@@ -10,8 +10,34 @@ import os
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def other_method(soup):
+    data = {
+        'name': 'N/A',
+        'sku': 'N/A',
+        'brand': {'name': 'N/A'},
+        'image': 'N/A',
+        'description': 'N/A',
+        'aggregateRating': {'reviewCount': 'N/A', 'ratingValue': 'N/A'},
+        'offers': {'price': 'N/A', 'priceCurrency': 'N/A', 'availability': 'undefined'}
+    }
+
+    data['name'] = soup.find('h1', {'data-hb-id': 'Heading'}).get_text(strip=True)
+    # data['sku'] = soup.find('div', {'data-hb-id': 'ProductSKU'}).get_text(strip=True)
+    data['brand']['name'] = soup.find('a', {'data-hb-id': 'Link'}).get_text(strip=True)
+    data['image'] = soup.find('img', {'data-hb-id': 'FluidImage'})['srcset']
+    data['description'] = soup.find('div', {'data-hb-id': 'Accordion'}).find('div', {'class': 'BoxV3'}).get_text(strip=True)
+    data['aggregateRating']['reviewCount'] = soup.find('span', {'data-hb-id': 'Link'}).get_text(strip=True).split()[0]
+    data['aggregateRating']['ratingValue'] = soup.find('p', {'data-rtl-id': 'reviewsHeaderReviewsAverage'}).get_text(strip=True)
+    price = soup.find('span', {'data-test-id': 'PriceDisplay'}).get_text(strip=True)
+    data['offers']['price'] = price[1:] if price[0] == '$' else price
+    data['offers']['priceCurrency'] = price[0] if price[0] == '$' else 'N/A'
+
+    return data
+
+
+
 def scrape_product(product, category):
-    csv_file = f"{category}_products_data.csv"
+    csv_file = "products_data.csv"
 
     try:
         # Check if the product URL already exists in the CSV file
@@ -34,17 +60,21 @@ def scrape_product(product, category):
         )
         api_response.raise_for_status()
 
+        if (api_response.status_code == 520):
+            logging.error(f"Error 520: Web server is returning an unknown error for product {product}")
+            scrape_product(product, category)
+            return
         http_response_body = b64decode(api_response.json()["httpResponseBody"])
         soup = BeautifulSoup(http_response_body, 'html.parser')
         
         # Find the JSON-LD script tag
         script_tag = soup.find('script', type='application/ld+json')
         
-        if not script_tag:
-            raise ValueError(f"No JSON-LD data found for product {product}")
-        
-        # Parse the JSON content
-        json_data = json.loads(script_tag.string)
+        if not script_tag or len(script_tag) < 5:
+            json_data = other_method(soup)
+        else:
+            # Parse the JSON content
+            json_data = json.loads(script_tag.string)
         
         # Extract the desired information
         product_name = json_data.get('name', 'N/A')
@@ -117,14 +147,15 @@ def scrape_sub_categories(url):
         http_response_body = b64decode(api_response.json()["httpResponseBody"])
         soup = BeautifulSoup(http_response_body, 'html.parser')
 
-        heading = soup.find('h1', {'data-hb-id': 'Heading'})
-        if not heading:
-            raise ValueError("Could not find category heading")
-        heading_text = heading.get_text(strip=True)
+        try:
+            heading = soup.find('h1', {'data-hb-id': 'Heading'})
+            heading_text = heading.get_text(strip=True)
+        except AttributeError:
+            heading = 'N/A'
         logging.info(f'Scraping Sub-Category: {heading_text}')
 
         while True:
-            products = soup.find_all('div', {'data-hb-id': 'Card'})
+            products = soup.find_all('div', {'data-hb-id': 'Grid.Item'})
             for product in products:
                 product_url = product.find('a')['href']
                 scrape_product(product_url, heading_text)

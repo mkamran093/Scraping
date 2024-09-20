@@ -1,0 +1,45 @@
+{
+  "major_categories_url": {
+    "1": "https://www.wayfair.com/furniture/cat/furniture-c45974.html",
+    "2": "https://www.wayfair.com/outdoor/cat/outdoor-c32334.html",
+    "3": "https://www.wayfair.com/bed-bath/cat/bed-bath-c215329.html",
+    "4": "https://www.wayfair.com/rugs/cat/rugs-c215385.html",
+    "5": "https://www.wayfair.com/decor-pillows/cat/decor-pillows-c45752.html",
+    "6": "https://www.wayfair.com/lighting/cat/lighting-c215735.html",
+    "7": "https://www.wayfair.com/storage-organization/cat/storage-organization-c215875.html",
+    "8": "https://www.wayfair.com/kitchen-tabletop/cat/kitchen-tabletop-c45667.html",
+    "9": "https://www.wayfair.com/baby-kids/cat/baby-kids-c45226.html",
+    "10": "https://www.wayfair.com/home-improvement/cat/home-improvement-c45342.html",
+    "11": "https://www.wayfair.com/appliances/cat/appliances-c215602.html",
+    "12": "https://www.wayfair.com/pet/cat/pet-c504273.html",
+    "13": "https://www.wayfair.com/holiday-decor/cat/holiday-decor-c1859601.html",
+    "14": "https://www.wayfair.com/shop-by-room/cat/shop-by-room-c1876502.html"
+  },
+  "categories_url": {
+    "Living Room Furniture": "https://www.wayfair.com/furniture/cat/living-room-furniture-c45982.html",
+    "Bedroom Furniture": "https://www.wayfair.com/furniture/cat/bedroom-furniture-c45984.html",
+    "Kitchen & Dining Furniture": "https://www.wayfair.com/furniture/cat/kitchen-dining-furniture-c214999.html",
+    "Office Furniture": "https://www.wayfair.com/furniture/cat/office-furniture-c332627.html",
+    "Entry & Mudroom Furniture": "https://www.wayfair.com/furniture/cat/entry-mudroom-furniture-c215147.html",
+    "Outdoor & Patio Furniture": "https://www.wayfair.com/outdoor/cat/outdoor-patio-furniture-c33338.html",
+    "Small Spaces": "https://www.wayfair.com/furniture/cat/small-spaces-c1863459.html",
+    "Bathroom Furniture": "https://www.wayfair.com/furniture/cat/bathroom-furniture-c45985.html",
+    "Baby & Kids Furniture": "https://www.wayfair.com/furniture/cat/baby-kids-furniture-c215047.html",
+    "Custom Furniture": "https://www.wayfair.com/furniture/cat/custom-furniture-c1870925.html",
+    "Game Tables & Game Room Furniture": "https://www.wayfair.com/furniture/cat/game-tables-game-room-furniture-c215192.html",
+    "Pet": "https://www.wayfair.com/pet/cat/pet-c504273.html"
+  },
+  "sub_categories_url": {
+    "Christmas": "https://www.wayfair.com/holiday-decor/cat/christmas-c547341.html",
+    "Halloween": "https://www.wayfair.com/holiday-decor/cat/halloween-c1873563.html",
+    "Thanksgiving": "https://www.wayfair.com/holiday-decor/cat/thanksgiving-c1871053.html",
+    "Hanukkah": "https://www.wayfair.com/holiday-decor/cat/hanukkah-c508998.html",
+    "New Year's Eve": "https://www.wayfair.com/holiday-decor/cat/new-years-eve-c1801391.html",
+    "Valentine's Day": "https://www.wayfair.com/holiday-decor/cat/valentines-day-c1801927.html",
+    "St. Patrick's Day": "https://www.wayfair.com/holiday-decor/cat/st-patricks-day-c1860005.html",
+    "Easter": "https://www.wayfair.com/holiday-decor/cat/easter-c1844162.html",
+    "Passover": "https://www.wayfair.com/holiday-decor/cat/passover-c523220.html",
+    "Mother's Day": "https://www.wayfair.com/holiday-decor/cat/mothers-day-c1860989.html",
+    "Father's Day": "https://www.wayfair.com/holiday-decor/cat/fathers-day-c1860990.html"
+  }
+}
